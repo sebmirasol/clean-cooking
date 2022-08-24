@@ -5,7 +5,7 @@ The goal of this project is to make a solar-powered device tha measures air qual
 ## Firmware
 
 The device will be coded as a Finite State Machine that revolves around it's battery level. Being solar-powered, we don't want to burn through the battery life. This is why 4 states have been defined:
-1. Sensor Heating: some electro-chemical sensors require pre-heating in order to give reliable measurments
+1. Sensor Heating: some electro-chemical sensors require pre-heating in order to give reliable measurements
 2. Nominal Sensing: read sensors every minute, send data every 15 min
 3. Minimal Sensing: read sensors every 15 minutes and send data every hour
 4. Critical Sensing: turn off sensors excep Particle Mater sensor and store the data until transition to another state.
