@@ -1,0 +1,4 @@
+{
+    "sketch": "Code\\firmware\\airQualityFSM\\airQualityFSM.ino",
+    "board": "arduino:avr:uno"
+}
