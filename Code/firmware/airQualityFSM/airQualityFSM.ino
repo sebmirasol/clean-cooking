@@ -72,8 +72,6 @@ void loop() {
     Sensing.transitionTo(NOMINAL);
   }else{;}
       
-  //TO DO: Execute sensor operations
-
   Sensing.update();
 
   #ifdef DEBUG_MODE
@@ -104,8 +102,8 @@ void nominal_sensing(){
   }
 
   if(readPMSdata() && read_sensors_flag){
-    //TO DO: read sensor data
-    //TO DO: store sensor data
+    read_sensor_data();
+    store_data();
   }
 
   read_sensors_flag = false;
@@ -122,8 +120,8 @@ void minimal_sensing(){
   }
 
   if(readPMSdata() && read_sensors_flag){
-    //TO DO: read sensor data
-    //TO DO: store sensor data
+    read_sensor_data();
+    store_data();
   }
 
   read_sensors_flag = false;
@@ -140,8 +138,8 @@ void critical_sensing(){
   }
 
   if(readPMSdata() && read_sensors_flag){
-    //TO DO: read sensor data
-    //TO DO: store sensor data
+    read_sensor_data();
+    store_data();
   }
 
   read_sensors_flag = false;
@@ -150,6 +148,14 @@ void critical_sensing(){
 /*
 *   Additional functions
 */
+
+void read_sensor_data(){
+
+}
+
+void store_data(){
+
+}
 
 boolean readPMSdata() {
   if (! pmSerial.available()) {
