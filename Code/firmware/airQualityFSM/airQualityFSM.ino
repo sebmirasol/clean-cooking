@@ -60,13 +60,13 @@ State CRITICAL = State(critical_sensing);
 FSM Sensing = FSM(HEAT);
 
 //sample time config
-const long int nominal_sample_period = 60000;   //default: 300000
+const long int nominal_sample_period = 5000;   //default: 300000
 const long int minimal_sample_period = 900000;
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
 
 //number of data transmission config
-const int nominal_samples_transmission = 15;    //default: 12
+const int nominal_samples_transmission = 10;    //default: 12
 const int minimal_samples_transmission = 60;
 
 //conection configuration
@@ -137,7 +137,7 @@ void setup() {
 
   GSM_serial.println("AT"); //Sync baudrate
   delay(500);
-  GSM_serial.println("ATE1"); //Sync baudrate
+  GSM_serial.println("AT+CFUN=0"); //Set to low power
   delay(500);
 
   //clear our input buffer
@@ -274,66 +274,68 @@ void critical_sensing(){
 */
 
 void connect_to_network(){
+  bool network_flag = true;
   GSM_serial.listen();
 
-  send_command("AT+CFUN=1");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CFUN = 1");
-  }
-    
-  send_command("AT+CIPSHUT");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPSHUT");
-  }
-
-  send_command("AT+CPIN?");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CPIN, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CPIN?");
-  }
-
   do{
-    send_command("AT+CREG?");
-    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CREG, crlfToWait)) {
-      register_flag = false;
-      if(enableDebug){
-        Serial.println("[GSM] ERROR: AT+CREG?");
-      } 
+    send_command("AT+CFUN=1");
+    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CPIN, crlfToWait)) {
+      if(enableDebug) Serial.println("[GSM] ERROR: AT+CFUN = 1");
+    }
+      
+    send_command("AT+CIPSHUT");
+    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
+      if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPSHUT");
+    }
+
+    send_command("AT+CPIN?");
+    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CPIN, crlfToWait)) {
+      if(enableDebug) Serial.println("[GSM] ERROR: AT+CPIN?");
+    }
+
+    do{
+      send_command("AT+CREG?");
+      if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CREG, crlfToWait)) {
+        if(enableDebug) Serial.println("[GSM] ERROR: Did not register to network");
+        network_flag = false;
       } else {
-        register_flag = true;
+        network_flag = true;
       }
-  } while (register_flag == false);
+    }while(network_flag == false);
 
-  send_command("AT+CGATT?");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CGATT, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CGATT?");
-  }
+    do{
+      send_command("AT+CGATT?");
+      if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CGATT, crlfToWait)) {
+        if(enableDebug) Serial.println("[GSM] ERROR: Could not attach to network");
+        network_flag = false;
+      } else {
+        network_flag = true;
+      }
+    }while(network_flag == false);
 
-  send_command("AT+CIPMUX=0");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPMUX=0");
-  }
+    send_command("AT+CIPMUX=0");
+    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
+      if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPMUX=0");
+    }
 
-  send_command("AT+CSTT = \"TM\",\" \",\" \"");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CSTT");
-  }
+    send_command("AT+CSTT = \"TM\",\" \",\" \"");
+    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
+      if(enableDebug) Serial.println("[GSM] ERROR: AT+CSTT");
+    }
 
-  do{
     send_command("AT+CIICR");
     if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, crlfToWait)) {
-      register_flag = false;
-      if(enableDebug){
-        Serial.println("[GSM] ERROR: AT+CIICR");
-      } 
-      } else {
-        register_flag = true;
-      }
-  } while (register_flag == false);
+      if(enableDebug) Serial.println("[GSM] ERROR: Could not bring up GPRS connection");
+      network_flag = false;
+    } else {
+      network_flag = true;
+    }
 
-  send_command("AT+CIFSR");
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CIFSR, crlfToWait)) {
-    if(enableDebug) Serial.println("[GSM] ERROR: AT+CIFSR");
-  }
+    send_command("AT+CIFSR");
+    if(!check_response(DEFAULT_TIMEOUT, AT_RSP_CIFSR, crlfToWait)) {
+      if(enableDebug) Serial.println("[GSM] ERROR: AT+CIFSR");
+    }
+  }while(network_flag == false);
 }
 
 void connect_to_server(){
@@ -360,13 +362,13 @@ void send_message(String msg){
 
   send_command("AT+CIPSEND=",header_size_str);
   send_command(payload_size_str);
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, 3)) {
+  if(!check_response(60000, AT_RSP_OK, 3)) {
     if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPSEND");
   }
 
   send_command("AT+CIPSEND=",payload_size_str);
   send_command(msg.c_str());
-  if(!check_response(DEFAULT_TIMEOUT, AT_RSP_OK, 3)) {
+  if(!check_response(60000, AT_RSP_OK, 3)) {
     if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPSEND");
   }
 }
