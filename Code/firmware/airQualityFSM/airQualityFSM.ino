@@ -20,8 +20,9 @@
 #include <TimeLib.h>
 #include <DS1307RTC.h>
 
+//#define DEBUG_MODE              //Comment out in order to turn off debug mode.
+
 #define DEVICE_ID           01
-#define DEBUG_MODE              //Comment out in order to turn off debug mode.
 #define LOW_BATTERY_LVL     40
 #define CRTICAL_BATTERY_LVL 10
 #define SERVER_IP           
@@ -39,6 +40,7 @@
 //AT Messages & variables
 #define DEFAULT_TIMEOUT   10000
 const char AT_RSP_OK[] PROGMEM = "OK";
+const char AT_INIT_OK[] PROGMEM = "OK";
 const char AT_RSP_CREG[] PROGMEM = ",5";
 const char AT_RSP_CPIN[] PROGMEM = "+CPIN: READY";
 const char AT_RSP_CGATT[] PROGMEM = "+CGATT: 1";
@@ -60,14 +62,14 @@ State CRITICAL = State(critical_sensing);
 FSM Sensing = FSM(HEAT);
 
 //sample time config
-const long int nominal_sample_period = 5000;   //default: 300000
-const long int minimal_sample_period = 900000;
+const long int nominal_sample_period = 300000;    //default: 300000, read every 5 min
+const long int minimal_sample_period = 900000;    //minimal: 900000, read every 15 min
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
 
 //number of data transmission config
-const int nominal_samples_transmission = 10;    //default: 12
-const int minimal_samples_transmission = 60;
+const int nominal_samples_transmission = 3;  //default: 12, send information every 15 min
+const int minimal_samples_transmission = 12;  //minimal: 12, send information every 60 min
 
 //conection configuration
 String msg_disconnect ="!O";
@@ -341,7 +343,7 @@ void connect_to_network(){
 void connect_to_server(){
   GSM_serial.listen();
 
-  send_command("AT+CIPSTART=\"TCP\",\"170.253.59.48\",\"1121\"");
+  send_command("AT+CIPSTART=\"TCP\",\"170.253.53.249\",\"1121\"");
   if(!check_response(120000, AT_RSP_CIPSTART, 4)) {
     if(enableDebug) Serial.println("[GSM] ERROR: AT+CIPSTART");
   }
@@ -481,6 +483,7 @@ bool readResponse(uint16_t timeout, uint8_t crlfToWait) {
     // If timeout, abord the reading
     if(millis() - timerStart > timeout) {
       if(enableDebug) Serial.println(F("SIM800L : Receive timeout"));
+      purge_serial();
       // Timeout, return false to parent function
       return false;
     }
